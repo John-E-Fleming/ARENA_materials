@@ -408,8 +408,10 @@ After connecting to your VM, open the VS Code terminal (`Ctrl+Backtick` / `Cmd+B
 
 ```bash
 git clone https://github.com/callummcdougall/ARENA_3.0.git
-ARENA_3.0/install.sh
+bash ARENA_3.0/install.sh
 ```
+
+Note the `bash` prefix - the script uses bash syntax, so running it as `sh install.sh` or `./install.sh` fails with `source: not found` and `[[: not found`.
 
 Install the **Python** and **Jupyter** extensions (and optionally **Ruff** for autoformatting).
 

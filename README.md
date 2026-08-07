@@ -4,14 +4,32 @@
 
 # Install Instructions
 
-1) Close the repo
+1) Clone the repo
 ```
 git clone https://github.com/callummcdougall/ARENA_3.0.git
 ```
-2) Run the install script
+2) Run the install script with `bash` (it uses bash syntax, so `sh install.sh` or `./install.sh` will fail)
 ```
-ARENA_3.0/install.sh
+bash ARENA_3.0/install.sh
 ```
+3) Activate the environment in your shell (new terminals get it automatically)
+```
+conda activate arena-env
+```
+
+<details>
+<summary>Troubleshooting</summary>
+
+- **`source: not found` / `[[: not found`** - the script was run with `sh` rather than `bash`. Use `bash ARENA_3.0/install.sh`.
+- **`The NVIDIA driver on your system is too old`** - your driver is CUDA 12.x but the installed torch is a CUDA 13 build. `requirements.txt` pins a cu124 build to avoid this; if you installed torch some other way, reinstall with `pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0`. On Blackwell GPUs (RTX 5090, B200) use `.../whl/cu128` and unpinned versions instead.
+- **`ResolutionImpossible` mentioning numpy** - you're installing `requirements-mujoco-gpu.txt` together with `requirements.txt`. They're deliberately separate; see the comments in those files.
+
+Verify the install with:
+```
+python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
+
+</details>
 
 This GitHub repo hosts the exercises and Streamlit pages for the ARENA program. (Note that the name is kept as "ARENA 3.0" for backwards compatibility, but we've stopped creating new repositories for different iterations of the program, meaning this is now the latest version of the repo and won't get replaced by a new one in the future.)
 

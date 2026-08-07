@@ -1,0 +1,14 @@
+# Optional extras for the [2.3] PPO MuJoCo GPU section (Brax `positional` backend + our torch PPO).
+#
+# These are NOT in requirements.txt because they cannot co-exist with it in a single pip
+# resolution: jax 0.10.1 requires numpy>=2.0, while CircuitsVis pins numpy to ^1.23 (i.e.
+# >=1.23,<2.0), so pip exits with ResolutionImpossible. Installing this file afterwards upgrades
+# numpy past CircuitsVis's declared bound - CircuitsVis is used for attention visualisations in
+# chapter 1, so only do this if you're working on [2.3] and can tolerate that, ideally in a
+# separate conda env.
+#
+# jax is pinned because brax only declares `jax>=0.4.6` (no upper bound), so an unpinned install
+# grabs a newer jax whose removed `device_put_replicated` breaks brax. jax 0.10.1 is the
+# verified-working combo.
+jax[cuda12]==0.10.1
+brax==0.14.2

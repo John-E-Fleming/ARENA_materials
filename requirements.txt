@@ -1,8 +1,15 @@
-# PyTorch with CUDA support
---extra-index-url https://download.pytorch.org/whl/cu118
-torch
-torchvision
-torchaudio
+# PyTorch with CUDA support.
+# Pinned to a CUDA 12.4 build: unpinned, pip takes the newest PyPI wheel, which is now built
+# against CUDA 13 and fails at import with "The NVIDIA driver on your system is too old" on the
+# 12.x drivers that most cloud GPU images ship. The pypi.org extra-index restores the default
+# index for every other package (and lets macOS/CPU installs fall back to the PyPI torch wheel).
+# On a Blackwell GPU (sm_120: RTX 5090, B200) these wheels have no matching kernels - swap the
+# index for .../whl/cu128 and drop the version pins.
+--index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://pypi.org/simple
+torch==2.6.0
+torchvision==0.21.0
+torchaudio==2.6.0
 
 # ML & DL
 huggingface_hub
@@ -77,11 +84,11 @@ mujoco
 # "mesalib=24.3.4"` (mesalib >= 25 dropped OSMesa). Backend selection + the conda-lib preload live
 # in part3_ppo/mujoco_rendering.py; see the [2.3] "Installation & Rendering" section. The Python
 # side (PyOpenGL, glfw) comes in as mujoco dependencies, and mp4 encoding uses imageio-ffmpeg.
-# GPU physics for the MuJoCo section (Brax `positional` backend + our torch PPO). Pinned because
-# brax only declares `jax>=0.4.6` (no upper bound), so an unpinned install grabs a newer jax whose
-# removed `device_put_replicated` breaks brax. jax 0.10.1 is the verified-working combo.
-jax[cuda12]==0.10.1
-brax==0.14.2
+#
+# GPU physics for the MuJoCo section (Brax) lives in requirements-mujoco-gpu.txt, because jax
+# requires numpy>=2 while CircuitsVis (line 75) pins numpy<2, making a combined install
+# unresolvable. Install it separately only if you're doing the [2.3] Brax/GPU-PPO section.
+#
 # Vectorised Atari emulators (C++) for the Atari bonus section's AtariEnvs.
 envpool==1.2.5
 

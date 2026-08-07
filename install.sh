@@ -1,13 +1,16 @@
-# #!/bin/bash
-# set -e
+#!/bin/bash
+set -euo pipefail
 
 # =============================================================================
 # First clone the ARENA_3.0 repo using:
-#   git clone -b alignment-science https://github.com/callummcdougall/ARENA_3.0.git
-# Then, usage:
+#   git clone https://github.com/callummcdougall/ARENA_3.0.git
+# Then, usage (must be run with bash, not sh):
 #   bash ARENA_3.0/install.sh                        # RunPod (default), with llm-context repo
 #   bash ARENA_3.0/install.sh --platform vastai      # Vast.ai platform
 #   bash ARENA_3.0/install.sh --no-llm-context       # Skip cloning arena-llm-context
+#
+# The script can be run from any working directory - it locates the repo relative
+# to its own path.
 # =============================================================================
 
 # Defaults
@@ -15,6 +18,10 @@ PLATFORM="runpod"
 CONDA_ENV="arena-env"
 PYTHON_VERSION="3.11"
 CLONE_LLM_CONTEXT=true
+
+# Locate the repo (the directory containing this script) and its parent
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PARENT_DIR="$(dirname "$REPO_DIR")"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -28,14 +35,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "=== Setup: platform=$PLATFORM, clone_llm_context=$CLONE_LLM_CONTEXT ==="
+echo "=== Setup: platform=$PLATFORM, repo=$REPO_DIR, clone_llm_context=$CLONE_LLM_CONTEXT ==="
 
-# --- Install Miniconda ---
-echo "=== Installing Miniconda ==="
-mkdir -p ~/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-rm -rf ~/miniconda3/miniconda.sh
+# --- Install Miniconda (skip if already present) ---
+if [ -x "$HOME/miniconda3/bin/conda" ]; then
+    echo "=== Miniconda already installed at $HOME/miniconda3, skipping ==="
+else
+    echo "=== Installing Miniconda ==="
+    mkdir -p ~/miniconda3
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+    rm -rf ~/miniconda3/miniconda.sh
+fi
 ~/miniconda3/bin/conda init bash
 
 # Source conda.sh to get conda activate working in this script
@@ -64,39 +75,51 @@ fi
 if $CLONE_LLM_CONTEXT; then
     REPO="callummcdougall/arena-llm-context"
     BRANCH="main"
-    echo "=== Cloning $REPO (branch: $BRANCH) ==="
-    git clone -b "$BRANCH" "https://github.com/${REPO}.git"
+    if [ -d "$PARENT_DIR/arena-llm-context" ]; then
+        echo "=== $PARENT_DIR/arena-llm-context already exists, skipping clone ==="
+    else
+        echo "=== Cloning $REPO (branch: $BRANCH) into $PARENT_DIR ==="
+        git clone -b "$BRANCH" "https://github.com/${REPO}.git" "$PARENT_DIR/arena-llm-context"
+    fi
 fi
 
 # # --- Git config ---
 # git config --global user.name callummcdougall
 # git config --global user.email cal.s.mcdougall@gmail.com
 
-# --- Install Python deps from primary repo ---
-PRIMARY_REPO_DIR="ARENA_3.0"
-echo "=== Installing Python dependencies from $PRIMARY_REPO_DIR ==="
-cd "$PRIMARY_REPO_DIR"
+# --- Install Python deps ---
+echo "=== Installing Python dependencies from $REPO_DIR ==="
+cd "$REPO_DIR"
 pip install -U pip setuptools wheel
 pip install -r requirements.txt
 conda install -n "$CONDA_ENV" ipykernel --update-deps --force-reinstall -y
-cd ..
+
+# --- Register the env as a Jupyter kernel ---
+echo "=== Registering Jupyter kernel '$CONDA_ENV' ==="
+python -m ipykernel install --user --name "$CONDA_ENV" --display-name "ARENA ($CONDA_ENV)"
 
 # --- VS Code workspace settings ---
 echo "=== Configuring VS Code workspace settings ==="
 
-HOME_DIR="$HOME"
-mkdir -p "$HOME_DIR/.vscode"
-cat > "$HOME_DIR/.vscode/settings.json" << EOF
+mkdir -p "$HOME/.vscode"
+cat > "$HOME/.vscode/settings.json" << EOF
 {
-    "python.defaultInterpreterPath": "$HOME_DIR/miniconda3/envs/$CONDA_ENV/bin/python",
+    "python.defaultInterpreterPath": "$HOME/miniconda3/envs/$CONDA_ENV/bin/python",
     "python.analysis.extraPaths": [
-        "$HOME_DIR/$PRIMARY_REPO_DIR/chapter0_fundamentals/exercises",
-        "$HOME_DIR/$PRIMARY_REPO_DIR/chapter1_transformer_interp/exercises",
-        "$HOME_DIR/$PRIMARY_REPO_DIR/chapter2_rl/exercises",
-        "$HOME_DIR/$PRIMARY_REPO_DIR/chapter3_llm_evals/exercises",
-        "$HOME_DIR/$PRIMARY_REPO_DIR/chapter4_alignment_science/exercises"
+        "$REPO_DIR/chapter0_fundamentals/exercises",
+        "$REPO_DIR/chapter1_transformer_interp/exercises",
+        "$REPO_DIR/chapter2_rl/exercises",
+        "$REPO_DIR/chapter3_llm_evals/exercises",
+        "$REPO_DIR/chapter4_alignment_science/exercises"
     ]
 }
 EOF
 
 echo "=== Done! ==="
+echo
+echo "Run 'conda activate $CONDA_ENV' in new shells (or open a new terminal)."
+echo "Verify the GPU with:"
+echo "  python -c \"import torch; print(torch.__version__, torch.cuda.is_available())\""
+echo
+echo "For the [2.3] MuJoCo GPU (Brax) section only, additionally run:"
+echo "  pip install -r $REPO_DIR/requirements-mujoco-gpu.txt"
